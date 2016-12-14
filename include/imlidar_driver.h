@@ -14,7 +14,6 @@
 namespace imlidar_driver {
 	class IMLidar {
 	public:
-		//uint16_t rpms; ///< @brief RPMS derived from the rpm bytes in an XV11 packet
 		/**
 		  * @brief Constructs a new XV11Laser attached to the given serial port
 		  * @param port The string for the serial port device to attempt to connect to, e.g. "/dev/ttyUSB0"
@@ -58,11 +57,9 @@ namespace imlidar_driver {
 	private:
 		std::string port_; ///< @brief The serial port the driver is attached to
 		uint32_t baud_rate_; ///< @brief The baud rate for the serial connection
-		//uint32_t firmware_; ///< @brief The firmware version to check.  Currently supports two different versions: 1 and 2.
 
 		bool shutting_down_; ///< @brief Flag for whether the driver is supposed to be shutting down or not
-		boost::asio::serial_port serial_; ///< @brief Actual serial port object for reading/writing to the XV11 Laser Scanner
-		//uint16_t motor_speed_; ///< @brief current motor speed as reported by the XV11.
+		boost::asio::serial_port serial_; ///< @brief Actual serial port object for reading/writing to the imlidar
 		uint8_t lidar_rps_; 	//to set the lidar speed, this value should be 1 to 10,the default value is 7Hz
 
 		uint8_t *ptr_data_in_buffer_; 		// to storage the whole lidar input data frame

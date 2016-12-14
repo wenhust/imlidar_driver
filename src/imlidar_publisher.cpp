@@ -3,7 +3,6 @@
 #include <sensor_msgs/LaserScan.h>
 #include <boost/asio.hpp>
 #include <imlidar_driver.h>
-//#include <std_msgs/UInt16.h>
 
 int main(int argc, char **argv)
 {
@@ -14,18 +13,14 @@ int main(int argc, char **argv)
 	std::string port;
 	int baud_rate;
 	std::string frame_id;
-	//int firmware_number;
 	int rps;
 	double angle_min;
 	double angle_max;
 	std::string angle_increment_direction;
 
-	//std_msgs::UInt16 rpms;
-
 	priv_nh.param("port", port, std::string("/dev/ttyUSB0"));
 	priv_nh.param("baud_rate", baud_rate, 115200);
 	priv_nh.param("frame_id", frame_id, std::string("base_link"));
-	//priv_nh.param("firmware_version", firmware_number, 1);
 	priv_nh.param("rps", rps, 7);
 	priv_nh.param("angle_min", angle_min, 2 * M_PI);
 	priv_nh.param("angle_max", angle_max, 0.0);

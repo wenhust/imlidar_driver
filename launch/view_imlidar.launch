@@ -1,13 +1,4 @@
 <launch>
-  <node name="imlidar_node" pkg="imlidar_driver" type="imlidar_node" output="screen" >
-    <param name="port" value="/dev/ttyUSB0" />
-    <param name="baud_rate" value="115200" />
-    <param name="frame_id" value="base_link" />
-    <param name="rps" value="7" />
-    <param name="angle_min" value="-3.12413907051" />
-    <param name="angle_max" value="3.14159274101" />
-    <param name="angle_increment_direction" value="ccw" />
-  </node>
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find imlidar_driver)/rviz/view_imlidar.rviz" />
   <node pkg="tf" type="static_transform_publisher" name="laser_link" args="0 0 0 0 0 0 1 world_link laser_link 100" />
 </launch>

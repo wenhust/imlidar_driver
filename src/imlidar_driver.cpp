@@ -67,7 +67,7 @@ namespace imlidar_driver {
 
 		ResultTypeDef result;
 		memset(ptr_data_to_pack_, 0, sizeof(ptr_data_to_pack_));	//clear the buffer
-														/* To  config the lidar rotation speed */
+		/* To  config the lidar rotation speed */
 		((uint16_t*)ptr_data_to_pack_)[0] = lidar_rps_ * 360;	// This byte should be the rotation of lidar, default is 7Hz
 		package_out_.DataID = PACK_SET_SPEED;
 		package_out_.DataInBuff = ptr_data_to_pack_;
@@ -106,7 +106,6 @@ namespace imlidar_driver {
 		bool got_scan = false;
 		receive_status_t receive_status = Waiting_header_1;
 		ResultTypeDef result;
-		//ROS_INFO("frame received");
 
 		while (!shutting_down_ && !got_scan) {
 			/* wait for header */
@@ -115,7 +114,6 @@ namespace imlidar_driver {
 				buffer_len_cnt++;
 				fault_cnt++;
 				if (fault_cnt > PARSE_LEN) {
-					//std::cout<<"Can not find header 0XAA 0XAA\n";
 					ROS_INFO("Can not find header 0XAA 0XAA");
 					fault_cnt = 0;
 					break;
@@ -147,7 +145,6 @@ namespace imlidar_driver {
 
 				fault_cnt++;
 				if (fault_cnt > PARSE_LEN) {
-					//std::cout<<"Can not find tail 0X55 0X55\n";
 					ROS_INFO("Can not find tail 0X55 0X55");
 					fault_cnt = 0;
 					break;
@@ -157,13 +154,11 @@ namespace imlidar_driver {
 					if (temp_char == 0x55) {
 						tail_pos_verify = buffer_len_cnt;
 						receive_status = Waiting_tail_2;
-						//printf("second last char %X \n",temp_char);
 					}
 				}
 				else if (receive_status == Waiting_tail_2) {
 					if (temp_char == 0x55 and tail_pos_verify == buffer_len_cnt - LENGTH_OF_TAIL + 1) {
 						receive_status = Tail_received;
-						//printf("last char %X , num %d \n",temp_char,buffer_len_cnt+1);
 					}
 					else if (temp_char == 0x55) {
 						tail_pos_verify = buffer_len_cnt;
@@ -175,13 +170,7 @@ namespace imlidar_driver {
 			if (receive_status == Tail_received) {
 				package_in_.DataInBuff = ptr_data_in_buffer_;
 				package_in_.DataInLen = buffer_len_cnt + 1;
-				// 	for(int i= 0; i<buffer_len_cnt + 1 ;i++){
-				// 	  //std::cout<< std::setbase(16) <<pdata_in_buffer[i]<<std::endl;
-				// 	  //printf("%X ",pdata_in_buffer[i]);
-				// 	}
-
 				result = Unpacking(&package_in_);
-				//ROS_INFO("frame received %d, %d\n",buffer_len_cnt+1,res);
 
 				if (result == PACK_OK and package_in_.DataID == PACK_LIDAR_DATA) {
 					/* This frame of data is lidar data, we will put lidar data into scan */
@@ -194,7 +183,6 @@ namespace imlidar_driver {
 						scan->ranges.push_back((ptr_lidar_data_->Data)[i].Distance / 1000.f);
 						scan->intensities.push_back((ptr_lidar_data_->Data)[i].Confidence);
 					}
-
 					scan->time_increment = 1.f / ptr_lidar_data_->CurrSpeed / 360;
 					scan->scan_time = 1.f / ptr_lidar_data_->CurrSpeed;
 					scan->angle_min = angle_min_;
@@ -203,23 +191,12 @@ namespace imlidar_driver {
 					scan->range_min = 0.15;
 					scan->range_max = 10.0;
 				}
-
 				receive_status = Waiting_header_1;
 				buffer_len_cnt = 0;
 				got_scan = true;
 				fault_cnt = 0;
 			}
-
 		}
 		return;
-		/*
-		if (res != PACK_FAIL) {
-			return ; //OK
-		}
-		else {
-			return ; //Fail
-		}
-		*/
-
 	}
 };
