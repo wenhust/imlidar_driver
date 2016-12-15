@@ -19,21 +19,25 @@ namespace imlidar_driver {
 		port_(port), baud_rate_(baud_rate), shutting_down_(false), serial_(io, port_), lidar_rps_(rps),
 		angle_min_(angle_min), angle_max_(angle_max), angle_increment_direction_(angle_increment_direction) {
 
-		serial_.set_option(boost::asio::serial_port_base::baud_rate(baud_rate_));					//≤®Ãÿ¬ 
-		serial_.set_option(boost::asio::serial_port_base::flow_control(boost::asio::serial_port_base::flow_control::none)); //¡˜øÿ÷∆
-		serial_.set_option(boost::asio::serial_port_base::parity(boost::asio::serial_port_base::parity::none));            //∆Ê≈º–£—È
-		serial_.set_option(boost::asio::serial_port_base::stop_bits(boost::asio::serial_port_base::stop_bits::one));        //Õ£÷πŒª
-		serial_.set_option(boost::asio::serial_port_base::character_size(8));                       // ˝æ›Œª
+		serial_.set_option(boost::asio::serial_port_base::baud_rate(baud_rate_));					//Ê≥¢ÁâπÁéá
+		serial_.set_option(boost::asio::serial_port_base::flow_control(boost::asio::serial_port_base::flow_control::none)); //ÊµÅÊéßÂà∂
+		serial_.set_option(boost::asio::serial_port_base::parity(boost::asio::serial_port_base::parity::none));            //Â•áÂÅ∂Ê†°È™å
+		serial_.set_option(boost::asio::serial_port_base::stop_bits(boost::asio::serial_port_base::stop_bits::one));        //ÂÅúÊ≠¢‰Ωç
+		serial_.set_option(boost::asio::serial_port_base::character_size(8));                       //Êï∞ÊçÆ‰Ωç
 
 		//init the pointer
 		//Warning this length may be less for further use !!!!!
 		ptr_data_in_buffer_ = new uint8_t[PARSE_LEN];
 		ptr_packed_data_to_lidar_ = new uint8_t[20];
 		ptr_data_to_pack_ = new uint8_t[20];
+		package_out_.DataOutLen = new uint32_t;
+		package_in_.DataOutLen = new uint32_t;
 
 		memset(ptr_data_in_buffer_, 0, sizeof(ptr_data_in_buffer_));
 		memset(ptr_packed_data_to_lidar_, 0, sizeof(ptr_packed_data_to_lidar_));
 		memset(ptr_data_to_pack_, 0, sizeof(ptr_data_to_pack_));
+		memset(package_out_.DataOutLen, 0, sizeof(package_out_.DataOutLen));
+		memset(package_in_.DataOutLen, 0, sizeof(package_in_.DataOutLen));
 	}
 
 	void IMLidar::start_lidar() {
@@ -46,7 +50,7 @@ namespace imlidar_driver {
 		package_out_.DataInBuff = ptr_data_to_pack_;
 		package_out_.DataInLen = 2; //the length of "start" cmd should be 2, the length and cmd value(first byte 1, second 0) were not mentioned in protocol
 		package_out_.DataOutBuff = ptr_packed_data_to_lidar_;
-
+		
 		result = Package(package_out_);	//pack the data
 
 		if (result != PACK_FAIL) {
@@ -58,7 +62,7 @@ namespace imlidar_driver {
 		}
 
 		/* we need to delay for a while after config start */
-		usleep(1000 * 50);
+		usleep(1000 * 100);
 		set_lidar_speed();
 	}
 
@@ -89,7 +93,7 @@ namespace imlidar_driver {
 		boost::system::error_code ec;
 		try {
 			/* send data through serial port */
-			boost::asio::write(serial_, boost::asio::buffer(package_out.DataOutBuff, package_out.DataOutLen), ec);
+			boost::asio::write(serial_, boost::asio::buffer(package_out.DataOutBuff, *package_out.DataOutLen), ec);
 		}
 		catch (boost::system::error_code ec) {
 			ROS_ERROR("Send command to imlidar error!");

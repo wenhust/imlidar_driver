@@ -66,7 +66,7 @@ ResultTypeDef Package(PackageDataStruct package)
 	*(package.DataOutBuff+i++) = P_TAIL;
 	*(package.DataOutBuff+i++) = P_TAIL;
 	
-	package.DataOutLen = i;
+	*package.DataOutLen = i;
 	
 	return PACK_OK;
 }
