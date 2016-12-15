@@ -67,7 +67,7 @@ ResultTypeDef Unpacking(PackageDataStruct *package)
                         if (checksum == ParseBuffer[data_out_count-1])
                         {
                             SdkProtocolHeaderTypeDef *sdk = (SdkProtocolHeaderTypeDef *)ParseBuffer;
-                            package->DataOutLen = data_out_count - 1 - sizeof(SdkProtocolHeaderTypeDef);
+                            *(package->DataOutLen) = data_out_count - 1 - sizeof(SdkProtocolHeaderTypeDef);
                             package->DataOutBuff = ParseBuffer + sizeof(SdkProtocolHeaderTypeDef);	
 							if(sdk->DeviceAddr == LIDAR_ADDRESS)
 								package->DataID = (PackageIDTypeDef)sdk->FunctionCode;
@@ -78,7 +78,7 @@ ResultTypeDef Unpacking(PackageDataStruct *package)
                         else
                         {
                             package->DataID = PACK_NULL;
-                            package->DataOutLen = 0;
+                            *(package->DataOutLen) = 0;
                             return PACK_FAIL;
                         }
                     }

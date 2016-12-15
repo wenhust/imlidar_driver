@@ -30,10 +30,14 @@ namespace imlidar_driver {
 		ptr_data_in_buffer_ = new uint8_t[PARSE_LEN];
 		ptr_packed_data_to_lidar_ = new uint8_t[20];
 		ptr_data_to_pack_ = new uint8_t[20];
+		package_out_.DataOutLen = new uint32_t;
+		package_in_.DataOutLen = new uint32_t;
 
 		memset(ptr_data_in_buffer_, 0, sizeof(ptr_data_in_buffer_));
 		memset(ptr_packed_data_to_lidar_, 0, sizeof(ptr_packed_data_to_lidar_));
 		memset(ptr_data_to_pack_, 0, sizeof(ptr_data_to_pack_));
+		memset(package_out_.DataOutLen, 0, sizeof(package_out_.DataOutLen));
+		memset(package_in_.DataOutLen, 0, sizeof(package_in_.DataOutLen));
 	}
 
 	void IMLidar::start_lidar() {
@@ -46,7 +50,7 @@ namespace imlidar_driver {
 		package_out_.DataInBuff = ptr_data_to_pack_;
 		package_out_.DataInLen = 2; //the length of "start" cmd should be 2, the length and cmd value(first byte 1, second 0) were not mentioned in protocol
 		package_out_.DataOutBuff = ptr_packed_data_to_lidar_;
-
+		
 		result = Package(package_out_);	//pack the data
 
 		if (result != PACK_FAIL) {
@@ -89,7 +93,7 @@ namespace imlidar_driver {
 		boost::system::error_code ec;
 		try {
 			/* send data through serial port */
-			boost::asio::write(serial_, boost::asio::buffer(package_out.DataOutBuff, package_out.DataOutLen), ec);
+			boost::asio::write(serial_, boost::asio::buffer(package_out.DataOutBuff, *package_out.DataOutLen), ec);
 		}
 		catch (boost::system::error_code ec) {
 			ROS_ERROR("Send command to imlidar error!");
