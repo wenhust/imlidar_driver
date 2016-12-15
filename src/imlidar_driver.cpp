@@ -19,11 +19,11 @@ namespace imlidar_driver {
 		port_(port), baud_rate_(baud_rate), shutting_down_(false), serial_(io, port_), lidar_rps_(rps),
 		angle_min_(angle_min), angle_max_(angle_max), angle_increment_direction_(angle_increment_direction) {
 
-		serial_.set_option(boost::asio::serial_port_base::baud_rate(baud_rate_));					//²¨ÌØÂÊ
-		serial_.set_option(boost::asio::serial_port_base::flow_control(boost::asio::serial_port_base::flow_control::none)); //Á÷¿ØÖÆ
-		serial_.set_option(boost::asio::serial_port_base::parity(boost::asio::serial_port_base::parity::none));            //ÆæÅ¼Ğ£Ñé
-		serial_.set_option(boost::asio::serial_port_base::stop_bits(boost::asio::serial_port_base::stop_bits::one));        //Í£Ö¹Î»
-		serial_.set_option(boost::asio::serial_port_base::character_size(8));                       //Êı¾İÎ»
+		serial_.set_option(boost::asio::serial_port_base::baud_rate(baud_rate_));					//æ³¢ç‰¹ç‡
+		serial_.set_option(boost::asio::serial_port_base::flow_control(boost::asio::serial_port_base::flow_control::none)); //æµæ§åˆ¶
+		serial_.set_option(boost::asio::serial_port_base::parity(boost::asio::serial_port_base::parity::none));            //å¥‡å¶æ ¡éªŒ
+		serial_.set_option(boost::asio::serial_port_base::stop_bits(boost::asio::serial_port_base::stop_bits::one));        //åœæ­¢ä½
+		serial_.set_option(boost::asio::serial_port_base::character_size(8));                       //æ•°æ®ä½
 
 		//init the pointer
 		//Warning this length may be less for further use !!!!!
@@ -62,7 +62,7 @@ namespace imlidar_driver {
 		}
 
 		/* we need to delay for a while after config start */
-		usleep(1000 * 50);
+		usleep(1000 * 100);
 		set_lidar_speed();
 	}
 
