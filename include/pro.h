@@ -64,7 +64,7 @@ typedef struct
     u8               *DataInBuff;
     u32              DataInLen;
     u8               *DataOutBuff;
-    u32              DataOutLen;
+    u32              *DataOutLen;
 } PackageDataStruct;
 
 
