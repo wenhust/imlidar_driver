@@ -20,13 +20,21 @@ namespace imlidar_driver {
 		  * @param baud_rate The baud rate to open the serial port at.
 		  * @param io Boost ASIO IO Service to use when creating the serial port object
 		  */
-		IMLidar(const std::string& port, uint32_t baud_rate, boost::asio::io_service& io, uint16_t rps = 7,
+		explicit IMLidar(const std::string& port, uint32_t baud_rate, boost::asio::io_service& io, uint16_t rps = 7,
 			double angle_min = 2 * M_PI, double angle_max = 0.0, std::string angle_increment_direction = "cw");
 
+		IMLidar& operator=(const IMLidar&) = delete;//禁用“=”
+		IMLidar(const IMLidar&) = delete;//禁用默认复制构造函数
 		/**
-		  * @brief Default destructor
+		  * @brief  destructor
 		  */
-		~IMLidar() {};
+		~IMLidar() {
+		  delete[] ptr_data_in_buffer_ ;
+		  delete[] ptr_packed_data_to_lidar_;
+		  delete[] ptr_data_to_pack_;
+		  delete package_out_.DataOutLen;
+		  delete package_in_.DataOutLen;
+		};
 
 		/**
 		  * @brief Poll the laser to get a new scan. Blocks until a complete new scan is received or close is called.
