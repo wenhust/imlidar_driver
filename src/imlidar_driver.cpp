@@ -2,7 +2,7 @@
 #include <imlidar_driver.h>
 
 namespace imlidar_driver {
-
+	/*
 	#define LENGTH_OF_HEADER 2   //inmotion Laser header length is 2
 	#define LENGTH_OF_TAIL 2   //inmotion Laser tail length is 2
 
@@ -13,7 +13,7 @@ namespace imlidar_driver {
 		Waiting_tail_2,
 		Tail_received
 	}receive_status_t;
-
+	*/
 	IMLidar::IMLidar(const std::string& port, uint32_t baud_rate, boost::asio::io_service& io, uint16_t rps,
 		double angle_min, double angle_max, std::string angle_increment_direction) :
 		port_(port), baud_rate_(baud_rate), shutting_down_(false), serial_(io, port_), lidar_rps_(rps),
@@ -32,6 +32,7 @@ namespace imlidar_driver {
 		ptr_data_to_pack_ = new uint8_t[20];
 		package_out_.DataOutLen = new uint32_t;
 		package_in_.DataOutLen = new uint32_t;
+		data_in_buffer_len_cnt = 0;
 
 		memset(ptr_data_in_buffer_, 0, sizeof(ptr_data_in_buffer_));
 		memset(ptr_packed_data_to_lidar_, 0, sizeof(ptr_packed_data_to_lidar_));
@@ -101,89 +102,27 @@ namespace imlidar_driver {
 		}
 	}
 
-	void IMLidar::poll(sensor_msgs::LaserScan::Ptr scan) {
-		uint8_t temp_char = 0;
-		uint16_t tail_pos_verify = 0;
-		uint16_t head_pos_verify = 0;
-		uint16_t buffer_len_cnt = 0;
-		uint16_t fault_cnt = 0;
+	bool IMLidar::poll(sensor_msgs::LaserScan::Ptr scan) {
+		bool result = false;
 		bool got_scan = false;
-		receive_status_t receive_status = Waiting_header_1;
-		ResultTypeDef result;
+		uint8_t temp_data;
+		while (!shutting_down_ && !got_scan)
+		{
+			boost::asio::read(serial_, boost::asio::buffer(&temp_data, 1));
+			ptr_data_in_buffer_[data_in_buffer_len_cnt++] = temp_data;
+			package_in_.DataInBuff = ptr_data_in_buffer_;
+			package_in_.DataInLen = data_in_buffer_len_cnt;
 
-		while (!shutting_down_ && !got_scan) {
-			/* wait for header */
-			while (receive_status == Waiting_header_1 or receive_status == Waiting_header_2) {
-				boost::asio::read(serial_, boost::asio::buffer(&temp_char, 1));
-				buffer_len_cnt++;
-				fault_cnt++;
-				if (fault_cnt > PARSE_LEN) {
-					ROS_INFO("Can not find header 0XAA 0XAA");
-					fault_cnt = 0;
-					break;
-				}
-				if (receive_status == Waiting_header_1) {
-					if (temp_char == 0xAA) {
-						head_pos_verify = buffer_len_cnt;
-						receive_status = Waiting_header_2;
-						*(ptr_data_in_buffer_ + Waiting_header_1) = temp_char;
-					}
-				}
-				else if (receive_status == Waiting_header_2) {
-					if (temp_char == 0xAA and head_pos_verify == buffer_len_cnt - LENGTH_OF_HEADER + 1) {
-						receive_status = Waiting_tail_1;
-						*(ptr_data_in_buffer_ + Waiting_header_2) = temp_char;
-						buffer_len_cnt = LENGTH_OF_HEADER - 1;
-					}
-					else if (temp_char == 0xAA) {
-						head_pos_verify = buffer_len_cnt;
-					}
-				}
-			}//while(receive_status == Waiting_header_1 or receive_status == Waiting_header_2){
-
-			 /* wait for tail */
-			while (receive_status == Waiting_tail_1 or receive_status == Waiting_tail_2) {
-				boost::asio::read(serial_, boost::asio::buffer(&temp_char, 1));
-				buffer_len_cnt++;
-				*(ptr_data_in_buffer_ + buffer_len_cnt) = temp_char;
-
-				fault_cnt++;
-				if (fault_cnt > PARSE_LEN) {
-					ROS_INFO("Can not find tail 0X55 0X55");
-					fault_cnt = 0;
-					break;
-				}
-
-				if (receive_status == Waiting_tail_1) {
-					if (temp_char == 0x55) {
-						tail_pos_verify = buffer_len_cnt;
-						receive_status = Waiting_tail_2;
-					}
-				}
-				else if (receive_status == Waiting_tail_2) {
-					if (temp_char == 0x55 and tail_pos_verify == buffer_len_cnt - LENGTH_OF_TAIL + 1) {
-						receive_status = Tail_received;
-					}
-					else if (temp_char == 0x55) {
-						tail_pos_verify = buffer_len_cnt;
-					}
-				}
-			}// while(receive_status == Waiting_tail_1 or receive_status == Waiting_tail_2){
-
-			 /* A frame of data is received, then pack the frame into PackageDataStruct structure */
-			if (receive_status == Tail_received) {
-				package_in_.DataInBuff = ptr_data_in_buffer_;
-				package_in_.DataInLen = buffer_len_cnt + 1;
-				result = Unpacking(&package_in_);
-
-				if (result == PACK_OK and package_in_.DataID == PACK_LIDAR_DATA) {
-					/* This frame of data is lidar data, we will put lidar data into scan */
+			if (result == false)
+			{
+				if (Unpacking(&package_in_) == PACK_OK and package_in_.DataID == PACK_LIDAR_DATA)
+				{
 					ptr_lidar_data_ = (LidarDataStructDef *)package_in_.DataOutBuff;
 					scan->ranges.reserve(360);
 					scan->intensities.reserve(360);
 
 					/* put range and intensities data into scan */
-					for (uint16_t i = 0; i<360; i++) {
+					for (uint16_t i = 0; i < 360; i++) {
 						scan->ranges.push_back((ptr_lidar_data_->Data)[i].Distance / 1000.f);
 						scan->intensities.push_back((ptr_lidar_data_->Data)[i].Confidence);
 					}
@@ -194,13 +133,122 @@ namespace imlidar_driver {
 					scan->angle_increment = (angle_increment_direction_ == "cw" ? -1 : 1)*(2.0*M_PI / 360.0);
 					scan->range_min = 0.15;
 					scan->range_max = 10.0;
+
+					data_in_buffer_len_cnt = 0;
+					package_in_.DataID = PACK_NULL;
+					got_scan = true;
+					result = true;
 				}
-				receive_status = Waiting_header_1;
-				buffer_len_cnt = 0;
-				got_scan = true;
-				fault_cnt = 0;
+			}
+			if (data_in_buffer_len_cnt >= PARSE_LEN)
+			{
+				data_in_buffer_len_cnt = 0;
+				result = false;
 			}
 		}
-		return;
+		return result;
 	}
+
+		
+	//	uint8_t temp_char = 0;
+	//	uint16_t tail_pos_verify = 0;
+	//	uint16_t head_pos_verify = 0;
+	//	uint16_t buffer_len_cnt = 0;
+	//	uint16_t fault_cnt = 0;
+	//	bool got_scan = false;
+	//	receive_status_t receive_status = Waiting_header_1;
+	//	ResultTypeDef result;
+
+	//	while (!shutting_down_ && !got_scan) {
+	//		/* wait for header */
+	//		while (receive_status == Waiting_header_1 or receive_status == Waiting_header_2) {
+	//			boost::asio::read(serial_, boost::asio::buffer(&temp_char, 1));
+	//			buffer_len_cnt++;
+	//			fault_cnt++;
+	//			if (fault_cnt > PARSE_LEN) {
+	//				ROS_INFO("Can not find header 0XAA 0XAA");
+	//				fault_cnt = 0;
+	//				break;
+	//			}
+	//			if (receive_status == Waiting_header_1) {
+	//				if (temp_char == 0xAA) {
+	//					head_pos_verify = buffer_len_cnt;
+	//					receive_status = Waiting_header_2;
+	//					*(ptr_data_in_buffer_ + Waiting_header_1) = temp_char;
+	//				}
+	//			}
+	//			else if (receive_status == Waiting_header_2) {
+	//				if (temp_char == 0xAA and head_pos_verify == buffer_len_cnt - LENGTH_OF_HEADER + 1) {
+	//					receive_status = Waiting_tail_1;
+	//					*(ptr_data_in_buffer_ + Waiting_header_2) = temp_char;
+	//					buffer_len_cnt = LENGTH_OF_HEADER - 1;
+	//				}
+	//				else if (temp_char == 0xAA) {
+	//					head_pos_verify = buffer_len_cnt;
+	//				}
+	//			}
+	//		}//while(receive_status == Waiting_header_1 or receive_status == Waiting_header_2){
+
+	//		 /* wait for tail */
+	//		while (receive_status == Waiting_tail_1 or receive_status == Waiting_tail_2) {
+	//			boost::asio::read(serial_, boost::asio::buffer(&temp_char, 1));
+	//			buffer_len_cnt++;
+	//			*(ptr_data_in_buffer_ + buffer_len_cnt) = temp_char;
+
+	//			fault_cnt++;
+	//			if (fault_cnt > PARSE_LEN) {
+	//				ROS_INFO("Can not find tail 0X55 0X55");
+	//				fault_cnt = 0;
+	//				break;
+	//			}
+
+	//			if (receive_status == Waiting_tail_1) {
+	//				if (temp_char == 0x55) {
+	//					tail_pos_verify = buffer_len_cnt;
+	//					receive_status = Waiting_tail_2;
+	//				}
+	//			}
+	//			else if (receive_status == Waiting_tail_2) {
+	//				if (temp_char == 0x55 and tail_pos_verify == buffer_len_cnt - LENGTH_OF_TAIL + 1) {
+	//					receive_status = Tail_received;
+	//				}
+	//				else if (temp_char == 0x55) {
+	//					tail_pos_verify = buffer_len_cnt;
+	//				}
+	//			}
+	//		}// while(receive_status == Waiting_tail_1 or receive_status == Waiting_tail_2){
+
+	//		 /* A frame of data is received, then pack the frame into PackageDataStruct structure */
+	//		if (receive_status == Tail_received) {
+	//			package_in_.DataInBuff = ptr_data_in_buffer_;
+	//			package_in_.DataInLen = buffer_len_cnt + 1;
+	//			result = Unpacking(&package_in_);
+
+	//			if (result == PACK_OK and package_in_.DataID == PACK_LIDAR_DATA) {
+	//				/* This frame of data is lidar data, we will put lidar data into scan */
+	//				ptr_lidar_data_ = (LidarDataStructDef *)package_in_.DataOutBuff;
+	//				scan->ranges.reserve(360);
+	//				scan->intensities.reserve(360);
+
+	//				/* put range and intensities data into scan */
+	//				for (uint16_t i = 0; i<360; i++) {
+	//					scan->ranges.push_back((ptr_lidar_data_->Data)[i].Distance / 1000.f);
+	//					scan->intensities.push_back((ptr_lidar_data_->Data)[i].Confidence);
+	//				}
+	//				scan->time_increment = 1.f / ptr_lidar_data_->CurrSpeed / 360;
+	//				scan->scan_time = 1.f / ptr_lidar_data_->CurrSpeed;
+	//				scan->angle_min = angle_min_;
+	//				scan->angle_max = angle_max_;
+	//				scan->angle_increment = (angle_increment_direction_ == "cw" ? -1 : 1)*(2.0*M_PI / 360.0);
+	//				scan->range_min = 0.15;
+	//				scan->range_max = 10.0;
+	//			}
+	//			receive_status = Waiting_header_1;
+	//			buffer_len_cnt = 0;
+	//			got_scan = true;
+	//			fault_cnt = 0;
+	//		}
+	//	}
+	//	return;
+	//}
 };

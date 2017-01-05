@@ -37,8 +37,10 @@ int main(int argc, char **argv)
 			sensor_msgs::LaserScan::Ptr scan(new sensor_msgs::LaserScan);
 			scan->header.frame_id = frame_id;
 			scan->header.stamp = ros::Time::now();
-			laser.poll(scan);
-			laser_pub.publish(scan);
+			if (laser.poll(scan))
+			{
+				laser_pub.publish(scan);
+			}
 		}
 		laser.close();
 		return 0;

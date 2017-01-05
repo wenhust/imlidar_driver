@@ -32,7 +32,7 @@ namespace imlidar_driver {
 		  * @brief Poll the laser to get a new scan. Blocks until a complete new scan is received or close is called.
 		  * @param scan LaserScan message pointer to fill in with the scan. The caller is responsible for filling in the ROS timestamp and frame_id
 		  */
-		void poll(sensor_msgs::LaserScan::Ptr scan);
+		bool poll(sensor_msgs::LaserScan::Ptr scan);
 
 		/**
 		  * @brief Close the driver down and prevent the polling loop from advancing
@@ -63,6 +63,7 @@ namespace imlidar_driver {
 		uint8_t lidar_rps_; 	//to set the lidar speed, this value should be 1 to 10,the default value is 7Hz
 
 		uint8_t *ptr_data_in_buffer_; 		// to storage the whole lidar input data frame
+		uint32_t data_in_buffer_len_cnt;
 		PackageDataStruct package_in_; 	// the package, received from lidar
 		PackageDataStruct package_out_; 	// to config lidar rotation speed and then  start rotation, the package will be send to lidar through serial port
 		LidarDataStructDef *ptr_lidar_data_; // the pure lidar data, contains the usful information
