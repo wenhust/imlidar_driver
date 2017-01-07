@@ -2,10 +2,8 @@
   <node name="imlidar_node" pkg="imlidar_driver" type="imlidar_node" output="screen" >
     <param name="port" value="/dev/ttyUSB0" />
     <param name="baud_rate" value="115200" />
-    <param name="frame_id" value="base_link" />
-    <param name="rps" value="7" />
-    <param name="angle_min" value="6.2831853071796" />
-    <param name="angle_max" value="0.0" />
-    <param name="angle_increment_direction" value="cw" />
+    <param name="frame_id" value="imlidar" />
+    <param name="rps" value="8" />
+    <param name="data_sequence_direction" value="cw" />
   </node>
 </launch>

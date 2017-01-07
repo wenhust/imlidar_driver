@@ -1,9 +1,9 @@
 # imlidar_driver
 ## Purpose
-ROS imlidar Driver. This driver works to reading scans from the Inmotion's USB port.
+ROS imlidar Driver. This driver works to reading scans from the serial port.
 
 ## Version
-ROS imlidar Driver version: Beta v0.1.2  
+ROS imlidar Driver version: Beta v0.2.0  
 适用lidar型号：ILD26TRI  
 在 ubuntu14.04 + ROS indigo 下测试通过
 
@@ -39,12 +39,8 @@ ROS imlidar Driver version: Beta v0.1.2
 
 #### 参数设置  
 使用gedit打开imlidar.launch，里面可以更改各类参数  
-| parameters| values      |
-|:---------:|-------------|
-|port       |设备端口号，默认值“/dev/ttyUSB0”|
-|baud_rate  |串口波特率，默认值“115200”，请勿随意调整波特率|
-|frame_id   |lidar数据所相对的坐标系名称，默认值“base_link”|
-|rps        |旋转频率，默认值为7Hz，最高可以调整为10Hz|
-|angle_min	|最小探测角度，默认值为：2*PI|
-|angle_max	|最大探测角度，默认值为：0.0|
-|angle_increment_direction| 雷达角度增量方向，默认值是“cw”，即为顺时针，此时角度增量为负。可以修改为逆时针“ccw”，角度增量为正。这个值的修改可能会导致ROS中定位算法得到的Lidar朝向和实际方向相反，可以通过倒置安装Lidar来解决反向问题。|
+port:设备端口号，默认值“/dev/ttyUSB0”
+baud_rate:串口波特率，默认值“115200”，请勿随意调整波特率
+frame_id:lidar数据所相对的坐标系名称，默认值“imlidar”
+rps:旋转频率，默认值为7Hz，最高可以调整为10Hz
+data_sequence_direction:雷达角度增量方向，默认值是“cw”，即为顺时针，此时角度增量为负。可以修改为逆时针“ccw”，角度增量为正。这个值的修改可能会导致ROS中定位算法得到的Lidar朝向和实际方向相反，可以通过倒置安装Lidar来解决反向问题。|

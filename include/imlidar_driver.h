@@ -1,4 +1,36 @@
-
+/*********************************************************************
+* Software License Agreement (BSD License)
+*
+*  Copyright (c) 2016, Inmotion Robot, Inc.
+*  All rights reserved.
+*
+*  Redistribution and use in source and binary forms, with or without
+*  modification, are permitted provided that the following conditions
+*  are met:
+*
+*   * Redistributions of source code must retain the above copyright
+*     notice, this list of conditions and the following disclaimer.
+*   * Redistributions in binary form must reproduce the above
+*     copyright notice, this list of conditions and the following
+*     disclaimer in the documentation and/or other materials provided
+*     with the distribution.
+*   * Neither the name of the Inmotion Robot nor the names of its
+*     contributors may be used to endorse or promote products derived
+*     from this software without specific prior written permission.
+*
+*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+*  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+*  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+*  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+*  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+*  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+*  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+*  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+*  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+*  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+*  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+*  POSSIBILITY OF SUCH DAMAGE.
+*********************************************************************/
 #ifndef IMLIDAR_DRIVER_H_
 #define IMLIDAR_DRIVER_H_
 
@@ -11,22 +43,47 @@
 #include <rec.h>
 #include <transmit.h>
 
+//define system parameters
+#define SCAN_RESOLUTION		(360)
+#define ANGLE_MIN			(0.0)
+#define ANGLE_MAX			(2.0 * M_PI)
+#define ANGLE_INCREMENT		(2.0 * M_PI / SCAN_RESOLUTION)
+#define RANGE_MIN			(0.15)
+#define RANGE_MAX			(10.0)
+
 namespace imlidar_driver {
 	class IMLidar {
 	public:
 		/**
-		  * @brief Constructs a new XV11Laser attached to the given serial port
+		  * @brief Constructs a new IMLidar attached to the given serial port
 		  * @param port The string for the serial port device to attempt to connect to, e.g. "/dev/ttyUSB0"
-		  * @param baud_rate The baud rate to open the serial port at.
+		  * @param baud_rate The baud rate to open the serial port at, e.g. "115200"
 		  * @param io Boost ASIO IO Service to use when creating the serial port object
+		  * @param rps The revolutions per second(rps) to set the lidar at, e.g. "8"
+		  * @param angle_increment_direction The angle increment direction between measurements, e.g. "cw"
 		  */
-		IMLidar(const std::string& port, uint32_t baud_rate, boost::asio::io_service& io, uint16_t rps = 7,
-			double angle_min = 2 * M_PI, double angle_max = 0.0, std::string angle_increment_direction = "cw");
+		IMLidar(const std::string& port, uint32_t baud_rate, boost::asio::io_service& io,
+			uint16_t rps = 8, std::string data_sequence_direction = "cw");
 
 		/**
 		  * @brief Default destructor
 		  */
 		~IMLidar() {};
+
+		/**
+		* @brief Config lidar and start rotation by writing data through serial port to lidar
+		*/
+		void start_lidar();
+
+		/**
+		* @brief Set lidar speed by writing data through serial port to lidar
+		*/
+		void set_lidar_speed(uint8_t lidar_rps);
+
+		/**
+		* @brief Send package to lidar through serial port
+		*/
+		void send_lidar_cmd(const PackageDataStruct &package_out);
 
 		/**
 		  * @brief Poll the laser to get a new scan. Blocks until a complete new scan is received or close is called.
@@ -37,42 +94,26 @@ namespace imlidar_driver {
 		/**
 		  * @brief Close the driver down and prevent the polling loop from advancing
 		  */
-		void close() { shutting_down_ = true; };
-
-		/**
-		  * @brief Config lidar speed and start rotation by writing data through serial port to lidar,
-		  */
-		void start_lidar();
-
-		/**
-		  * @brief Config lidar speed and start rotation by writing data through serial port to lidar,
-		  */
-		void set_lidar_speed();
-
-		/**
-		  * @brief send package to lidar, through serial port
-		  */
-		void send_lidar_cmd(const PackageDataStruct &package_out);
+		void close();
 
 	private:
-		std::string port_; ///< @brief The serial port the driver is attached to
-		uint32_t baud_rate_; ///< @brief The baud rate for the serial connection
-
-		bool shutting_down_; ///< @brief Flag for whether the driver is supposed to be shutting down or not
-		boost::asio::serial_port serial_; ///< @brief Actual serial port object for reading/writing to the imlidar
-		uint8_t lidar_rps_; 	//to set the lidar speed, this value should be 1 to 10,the default value is 7Hz
-
-		uint8_t *ptr_data_in_buffer_; 		// to storage the whole lidar input data frame
-		uint32_t data_in_buffer_len_cnt;
-		PackageDataStruct package_in_; 	// the package, received from lidar
-		PackageDataStruct package_out_; 	// to config lidar rotation speed and then  start rotation, the package will be send to lidar through serial port
-		LidarDataStructDef *ptr_lidar_data_; // the pure lidar data, contains the usful information
-		uint8_t *ptr_data_to_pack_; 		//the pure data(NO headers,etc) we want send to the lidar
-		uint8_t *ptr_packed_data_to_lidar_; //the final data(contain headers and tails and checksum) we want send to the lidar
-		double angle_min_;			//lidar scan minmum angle ,To adapt to the cartographer default value is 2*PI
-		double angle_max_;			//lidar scan maxmum angle ,To adapt to the cartographer default value is 0
-		std::string angle_increment_direction_;	//lidar scan angle increment for each scan. To adapt to the cartographer default value is -(2.0*M_PI/360.0)
+		std::string port_;						// @brief The serial port the driver is attached to
+		uint32_t baud_rate_;					// @brief The baud rate for the serial connection
+		bool shutting_down_;					// @brief Flag for whether the driver is supposed to be shutting down or not
+		boost::asio::serial_port serial_;		// @brief Actual serial port object for reading/writing to the imlidar
+		uint8_t lidar_rps_;						// @brief The revolutions per second(rps) to set the lidar at, value range[0,10], default 8rps
+		std::string data_sequence_direction_;	// @brief The angle increment direction between measurements
+		
+		uint8_t *ptr_data_in_buffer_; 			// @brief The pointer that point the whole lidar input data frame
+		uint32_t data_in_buffer_len_cnt;		// @brief The length counter to the pointer *ptr_data_in_buffer_
+		PackageDataStruct package_in_;			// @brief The package that received from lidar
+		PackageDataStruct package_out_;			// @brief The package that will be sent to lidar
+		LidarDataStructDef *ptr_lidar_data_;	// @brief The pointer that point the pure lidar data(no headers etc)
+		uint8_t *ptr_data_to_pack_; 			// @brief The pointer that point the pure data(no headers etc) which will be packed and sent to the lidar
+		uint8_t *ptr_packed_data_to_lidar_;		// @brief The pointer that point the packed data(contain headers etc) which was packed and will be sent to the lidar
 	};
 };
 
 #endif /* IMLIDAR_DRIVER_H_ */
+
+/************************* END OF FILE *******************************/

@@ -1,32 +1,52 @@
-
+/*********************************************************************
+* Software License Agreement (BSD License)
+*
+*  Copyright (c) 2016, Inmotion Robot, Inc.
+*  All rights reserved.
+*
+*  Redistribution and use in source and binary forms, with or without
+*  modification, are permitted provided that the following conditions
+*  are met:
+*
+*   * Redistributions of source code must retain the above copyright
+*     notice, this list of conditions and the following disclaimer.
+*   * Redistributions in binary form must reproduce the above
+*     copyright notice, this list of conditions and the following
+*     disclaimer in the documentation and/or other materials provided
+*     with the distribution.
+*   * Neither the name of the Inmotion Robot nor the names of its
+*     contributors may be used to endorse or promote products derived
+*     from this software without specific prior written permission.
+*
+*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+*  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+*  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+*  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+*  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+*  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+*  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+*  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+*  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+*  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+*  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+*  POSSIBILITY OF SUCH DAMAGE.
+*********************************************************************/
 #include <imlidar_driver.h>
 
 namespace imlidar_driver {
-	/*
-	#define LENGTH_OF_HEADER 2   //inmotion Laser header length is 2
-	#define LENGTH_OF_TAIL 2   //inmotion Laser tail length is 2
+	IMLidar::IMLidar(const std::string& port, uint32_t baud_rate, boost::asio::io_service& io,
+		uint16_t rps, std::string data_sequence_direction) :
+		port_(port), baud_rate_(baud_rate), shutting_down_(false), serial_(io, port_),
+		lidar_rps_(rps), data_sequence_direction_(data_sequence_direction) {
 
-	typedef enum _receive_status_t {
-		Waiting_header_1 = 0,
-		Waiting_header_2,
-		Waiting_tail_1,
-		Waiting_tail_2,
-		Tail_received
-	}receive_status_t;
-	*/
-	IMLidar::IMLidar(const std::string& port, uint32_t baud_rate, boost::asio::io_service& io, uint16_t rps,
-		double angle_min, double angle_max, std::string angle_increment_direction) :
-		port_(port), baud_rate_(baud_rate), shutting_down_(false), serial_(io, port_), lidar_rps_(rps),
-		angle_min_(angle_min), angle_max_(angle_max), angle_increment_direction_(angle_increment_direction) {
+		/* Config the serial port parameters */
+		serial_.set_option(boost::asio::serial_port_base::baud_rate(baud_rate_));
+		serial_.set_option(boost::asio::serial_port_base::flow_control(boost::asio::serial_port_base::flow_control::none));
+		serial_.set_option(boost::asio::serial_port_base::parity(boost::asio::serial_port_base::parity::none));
+		serial_.set_option(boost::asio::serial_port_base::stop_bits(boost::asio::serial_port_base::stop_bits::one));
+		serial_.set_option(boost::asio::serial_port_base::character_size(8));
 
-		serial_.set_option(boost::asio::serial_port_base::baud_rate(baud_rate_));					//波特率
-		serial_.set_option(boost::asio::serial_port_base::flow_control(boost::asio::serial_port_base::flow_control::none)); //流控制
-		serial_.set_option(boost::asio::serial_port_base::parity(boost::asio::serial_port_base::parity::none));            //奇偶校验
-		serial_.set_option(boost::asio::serial_port_base::stop_bits(boost::asio::serial_port_base::stop_bits::one));        //停止位
-		serial_.set_option(boost::asio::serial_port_base::character_size(8));                       //数据位
-
-		//init the pointer
-		//Warning this length may be less for further use !!!!!
+		/* Init the pointer */
 		ptr_data_in_buffer_ = new uint8_t[PARSE_LEN];
 		ptr_packed_data_to_lidar_ = new uint8_t[20];
 		ptr_data_to_pack_ = new uint8_t[20];
@@ -40,16 +60,16 @@ namespace imlidar_driver {
 		memset(package_out_.DataOutLen, 0, sizeof(package_out_.DataOutLen));
 		memset(package_in_.DataOutLen, 0, sizeof(package_in_.DataOutLen));
 	}
-
+	
 	void IMLidar::start_lidar() {
 
 		ResultTypeDef result;
-		/* Send command to start rotation */
+		
 		memset(ptr_data_to_pack_, 0, sizeof(ptr_data_to_pack_));
-		ptr_data_to_pack_[0] = 1;	// "start" cmd. This byte should be 1, but the protocol didn't mention it
+		ptr_data_to_pack_[0] = 1;		//"start" cmd. This byte should be 1
 		package_out_.DataID = PACK_START_ROTATE;
 		package_out_.DataInBuff = ptr_data_to_pack_;
-		package_out_.DataInLen = 2; //the length of "start" cmd should be 2, the length and cmd value(first byte 1, second 0) were not mentioned in protocol
+		package_out_.DataInLen = 2;		//the length of "start" cmd should be 2, the length and cmd value(first byte 1, second byte 0)
 		package_out_.DataOutBuff = ptr_packed_data_to_lidar_;
 		
 		result = Package(package_out_);	//pack the data
@@ -64,24 +84,23 @@ namespace imlidar_driver {
 
 		/* we need to delay for a while after config start */
 		usleep(1000 * 100);
-		set_lidar_speed();
+		set_lidar_speed(lidar_rps_);
 	}
 
-	/* set lidar rotation speed default is 7Hz */
-	void IMLidar::set_lidar_speed() {
+	void IMLidar::set_lidar_speed(uint8_t lidar_rps) {
 
 		ResultTypeDef result;
-		memset(ptr_data_to_pack_, 0, sizeof(ptr_data_to_pack_));	//clear the buffer
-		/* To  config the lidar rotation speed */
-		((uint16_t*)ptr_data_to_pack_)[0] = lidar_rps_ * 360;	// This byte should be the rotation of lidar, default is 7Hz
+		memset(ptr_data_to_pack_, 0, sizeof(ptr_data_to_pack_));//clear the buffer
+		/* Config the lidar rotation speed parameters */
+		((uint16_t*)ptr_data_to_pack_)[0] = lidar_rps * SCAN_RESOLUTION;	//This byte should be the rotation speed of lidar
 		package_out_.DataID = PACK_SET_SPEED;
 		package_out_.DataInBuff = ptr_data_to_pack_;
-		package_out_.DataInLen = 2; //the length of "SET_SPEED" cmd should be 2, the length is not mentioned in protocol
+		package_out_.DataInLen = 2;								//the length of "SET_SPEED" cmd should be 2
 		package_out_.DataOutBuff = ptr_packed_data_to_lidar_;
 
-		result = Package(package_out_);	//pack the data
+		result = Package(package_out_);							//pack the data
 		if (result != PACK_FAIL) {
-			send_lidar_cmd(package_out_);
+			send_lidar_cmd(package_out_);						//send the command package to lidar
 		}
 		else {
 			ROS_ERROR("Set speed of imlidar error!");
@@ -89,7 +108,6 @@ namespace imlidar_driver {
 		}
 	}
 
-	 /* send lidar package */
 	void IMLidar::send_lidar_cmd(const PackageDataStruct &package_out) {
 		boost::system::error_code ec;
 		try {
@@ -118,21 +136,42 @@ namespace imlidar_driver {
 				if (Unpacking(&package_in_) == PACK_OK and package_in_.DataID == PACK_LIDAR_DATA)
 				{
 					ptr_lidar_data_ = (LidarDataStructDef *)package_in_.DataOutBuff;
-					scan->ranges.reserve(360);
-					scan->intensities.reserve(360);
 
-					/* put range and intensities data into scan */
-					for (uint16_t i = 0; i < 360; i++) {
-						scan->ranges.push_back((ptr_lidar_data_->Data)[i].Distance / 1000.f);
-						scan->intensities.push_back((ptr_lidar_data_->Data)[i].Confidence);
-					}
-					scan->time_increment = 1.f / ptr_lidar_data_->CurrSpeed / 360;
+					/* prepare the scan to publish */
+					scan->angle_min = ANGLE_MIN;
+					scan->angle_max = ANGLE_MAX;
+					scan->angle_increment = ANGLE_INCREMENT;
+					scan->time_increment = 1.f / ptr_lidar_data_->CurrSpeed / SCAN_RESOLUTION;
 					scan->scan_time = 1.f / ptr_lidar_data_->CurrSpeed;
-					scan->angle_min = angle_min_;
-					scan->angle_max = angle_max_;
-					scan->angle_increment = (angle_increment_direction_ == "cw" ? -1 : 1)*(2.0*M_PI / 360.0);
-					scan->range_min = 0.15;
-					scan->range_max = 10.0;
+					scan->range_min = RANGE_MIN;
+					scan->range_max = RANGE_MAX;
+					scan->ranges.clear();
+					scan->intensities.clear();
+
+					/* check data_sequence_direction for data sequence */
+					if (data_sequence_direction_ == "ccw")
+					{
+						for (uint16_t i = 0; i < SCAN_RESOLUTION; i++)
+						{
+							scan->ranges.push_back((ptr_lidar_data_->Data)[i].Distance / 1000.f);
+							scan->intensities.push_back((ptr_lidar_data_->Data)[i].Confidence);
+						}
+							
+					}
+					else if (data_sequence_direction_ == "cw")
+					{
+						for (uint16_t i = 0; i < SCAN_RESOLUTION; i++)
+						{
+							scan->ranges.push_back((ptr_lidar_data_->Data)[SCAN_RESOLUTION - i].Distance / 1000.f);
+							scan->intensities.push_back((ptr_lidar_data_->Data)[SCAN_RESOLUTION - i].Confidence);
+						}
+					}
+					else
+					{
+						ROS_ERROR("Please check the data_sequence_direction value, is cw or ccw?");
+						result = false;
+						return result;
+					}
 
 					data_in_buffer_len_cnt = 0;
 					package_in_.DataID = PACK_NULL;
@@ -140,6 +179,7 @@ namespace imlidar_driver {
 					result = true;
 				}
 			}
+			/* If the buffer full and unpackage failed, drop it and restart */
 			if (data_in_buffer_len_cnt >= PARSE_LEN)
 			{
 				data_in_buffer_len_cnt = 0;
@@ -149,106 +189,11 @@ namespace imlidar_driver {
 		return result;
 	}
 
-		
-	//	uint8_t temp_char = 0;
-	//	uint16_t tail_pos_verify = 0;
-	//	uint16_t head_pos_verify = 0;
-	//	uint16_t buffer_len_cnt = 0;
-	//	uint16_t fault_cnt = 0;
-	//	bool got_scan = false;
-	//	receive_status_t receive_status = Waiting_header_1;
-	//	ResultTypeDef result;
+	void IMLidar::close() {
 
-	//	while (!shutting_down_ && !got_scan) {
-	//		/* wait for header */
-	//		while (receive_status == Waiting_header_1 or receive_status == Waiting_header_2) {
-	//			boost::asio::read(serial_, boost::asio::buffer(&temp_char, 1));
-	//			buffer_len_cnt++;
-	//			fault_cnt++;
-	//			if (fault_cnt > PARSE_LEN) {
-	//				ROS_INFO("Can not find header 0XAA 0XAA");
-	//				fault_cnt = 0;
-	//				break;
-	//			}
-	//			if (receive_status == Waiting_header_1) {
-	//				if (temp_char == 0xAA) {
-	//					head_pos_verify = buffer_len_cnt;
-	//					receive_status = Waiting_header_2;
-	//					*(ptr_data_in_buffer_ + Waiting_header_1) = temp_char;
-	//				}
-	//			}
-	//			else if (receive_status == Waiting_header_2) {
-	//				if (temp_char == 0xAA and head_pos_verify == buffer_len_cnt - LENGTH_OF_HEADER + 1) {
-	//					receive_status = Waiting_tail_1;
-	//					*(ptr_data_in_buffer_ + Waiting_header_2) = temp_char;
-	//					buffer_len_cnt = LENGTH_OF_HEADER - 1;
-	//				}
-	//				else if (temp_char == 0xAA) {
-	//					head_pos_verify = buffer_len_cnt;
-	//				}
-	//			}
-	//		}//while(receive_status == Waiting_header_1 or receive_status == Waiting_header_2){
-
-	//		 /* wait for tail */
-	//		while (receive_status == Waiting_tail_1 or receive_status == Waiting_tail_2) {
-	//			boost::asio::read(serial_, boost::asio::buffer(&temp_char, 1));
-	//			buffer_len_cnt++;
-	//			*(ptr_data_in_buffer_ + buffer_len_cnt) = temp_char;
-
-	//			fault_cnt++;
-	//			if (fault_cnt > PARSE_LEN) {
-	//				ROS_INFO("Can not find tail 0X55 0X55");
-	//				fault_cnt = 0;
-	//				break;
-	//			}
-
-	//			if (receive_status == Waiting_tail_1) {
-	//				if (temp_char == 0x55) {
-	//					tail_pos_verify = buffer_len_cnt;
-	//					receive_status = Waiting_tail_2;
-	//				}
-	//			}
-	//			else if (receive_status == Waiting_tail_2) {
-	//				if (temp_char == 0x55 and tail_pos_verify == buffer_len_cnt - LENGTH_OF_TAIL + 1) {
-	//					receive_status = Tail_received;
-	//				}
-	//				else if (temp_char == 0x55) {
-	//					tail_pos_verify = buffer_len_cnt;
-	//				}
-	//			}
-	//		}// while(receive_status == Waiting_tail_1 or receive_status == Waiting_tail_2){
-
-	//		 /* A frame of data is received, then pack the frame into PackageDataStruct structure */
-	//		if (receive_status == Tail_received) {
-	//			package_in_.DataInBuff = ptr_data_in_buffer_;
-	//			package_in_.DataInLen = buffer_len_cnt + 1;
-	//			result = Unpacking(&package_in_);
-
-	//			if (result == PACK_OK and package_in_.DataID == PACK_LIDAR_DATA) {
-	//				/* This frame of data is lidar data, we will put lidar data into scan */
-	//				ptr_lidar_data_ = (LidarDataStructDef *)package_in_.DataOutBuff;
-	//				scan->ranges.reserve(360);
-	//				scan->intensities.reserve(360);
-
-	//				/* put range and intensities data into scan */
-	//				for (uint16_t i = 0; i<360; i++) {
-	//					scan->ranges.push_back((ptr_lidar_data_->Data)[i].Distance / 1000.f);
-	//					scan->intensities.push_back((ptr_lidar_data_->Data)[i].Confidence);
-	//				}
-	//				scan->time_increment = 1.f / ptr_lidar_data_->CurrSpeed / 360;
-	//				scan->scan_time = 1.f / ptr_lidar_data_->CurrSpeed;
-	//				scan->angle_min = angle_min_;
-	//				scan->angle_max = angle_max_;
-	//				scan->angle_increment = (angle_increment_direction_ == "cw" ? -1 : 1)*(2.0*M_PI / 360.0);
-	//				scan->range_min = 0.15;
-	//				scan->range_max = 10.0;
-	//			}
-	//			receive_status = Waiting_header_1;
-	//			buffer_len_cnt = 0;
-	//			got_scan = true;
-	//			fault_cnt = 0;
-	//		}
-	//	}
-	//	return;
-	//}
+		set_lidar_speed(0);
+		shutting_down_ = true;
+	}
 };
+
+/************************* END OF FILE *******************************/

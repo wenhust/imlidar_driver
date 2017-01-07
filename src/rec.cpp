@@ -1,22 +1,40 @@
-﻿/**
- * @file        rec.c
- * @author      陈维
- * @version     V01
- * @date        2016.09.21
- * @brief       解包
- * @note
- *
- * @attention   COYPRIGHT INMOTION ROBOT
- **/
+﻿/*********************************************************************
+* Software License Agreement (BSD License)
+*
+*  Copyright (c) 2016, Inmotion Robot, Inc.
+*  All rights reserved.
+*
+*  Redistribution and use in source and binary forms, with or without
+*  modification, are permitted provided that the following conditions
+*  are met:
+*
+*   * Redistributions of source code must retain the above copyright
+*     notice, this list of conditions and the following disclaimer.
+*   * Redistributions in binary form must reproduce the above
+*     copyright notice, this list of conditions and the following
+*     disclaimer in the documentation and/or other materials provided
+*     with the distribution.
+*   * Neither the name of the Inmotion Robot nor the names of its
+*     contributors may be used to endorse or promote products derived
+*     from this software without specific prior written permission.
+*
+*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+*  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+*  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+*  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+*  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+*  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+*  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+*  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+*  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+*  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+*  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+*  POSSIBILITY OF SUCH DAMAGE.
+*********************************************************************/
 #include "rec.h"
 
-static u8 ParseBuffer[PARSE_LEN];                    // 存放解包后的数据
+static u8 ParseBuffer[PARSE_LEN];
 
-/**
- * @brief  解包函数
- * @param  待解包数据指针
- * @retval 返回解包成功或者失败
- */
 ResultTypeDef Unpacking(PackageDataStruct *package)
 {
     u16 i = 0;
@@ -37,13 +55,13 @@ ResultTypeDef Unpacking(PackageDataStruct *package)
                 {
                     if (*(package->DataInBuff + package->DataInLen - (i + 1)) == P_HEADER)
                     {
-                        u8 *pbuff = package->DataInBuff + package->DataInLen - (i - 1); // pbuff指向DataInBuff有效数据起始位置(即AA AA 后面的一位)
-                        u16 len = i - 3; //i 的长度为数据包(AA AA ... 55 55) 长度减一，len为有效数据长度(除去AA AA 55 55部分，包含checksum)
+                        u8 *pbuff = package->DataInBuff + package->DataInLen - (i - 1);
+                        u16 len = i - 3;
                         u16 j = 0;
                         u8 checksum = 0;
                         u16 data_out_count = 0;
 
-						if(len > sizeof(ParseBuffer)) //ParseBuffer的size要足够大
+						if(len > sizeof(ParseBuffer))
 							return PACK_FAIL;
                         for (j = 0 ; j < len; j++)
                         {
@@ -91,9 +109,7 @@ ResultTypeDef Unpacking(PackageDataStruct *package)
             }
         }
     }
-
     return PACK_FAIL;
 }
 
-
-/************************ (C) COPYRIGHT INMOTION ROBOT *****END OF FILE****/
+/************************* END OF FILE *******************************/
