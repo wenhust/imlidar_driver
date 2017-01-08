@@ -22,7 +22,8 @@ Email: support.robot@imscv.com
 `cd src`  
 `git clone https://github.com/wenhust/imlidar_driver.git`  
 4. Build and install  
-`catkin_make ..`  
+`cd ..`  
+`catkin_make`  
 `echo "source ~/catkin_ws/devel/setup.bash" >> ~/.bashrc`  
 `source ~/.bashrc`  
 
