@@ -1,46 +1,60 @@
-# imlidar_driver
-## Purpose
-ROS imlidar Driver. This driver works to reading scans from the serial port.
+# Imlidar Driver for ROS
+## Overview
+IMLIDAR is a low cost LIDAR sensor suitable for indoor robotic SLAM application. It provides 360 degree scan field and supports 3600 samples per second, 0~10hz rotating frequency with guaranteed 0.15~10 meter ranger distance.  
+This is the documentation of a driver for the IMLIDAR ILD26TRI laser range finder.  
+The driver is based upon the widespread boost asio library (<http://www.boost.org>) and publishes device-dependent sensor_msgs/LaserScan data.  
+Website: https://robot.imscv.com  
+Email: support.robot@imscv.com
 
 ## Version
-ROS imlidar Driver version: Beta v0.2.0  
-适用lidar型号：ILD26TRI  
-在 ubuntu14.04 + ROS indigo 下测试通过
+0.2.0  
 
 ## Getting started
-1. 创建并初始化工作空间  
+### Building and installation 
+1. Install wstool  
+`sudo apt-get update`  
+`sudo apt-get install -y python-wstool`  
+2. Create a new workspace in 'catkin_ws'  
 `mkdir catkin_ws`  
 `cd catkin_ws`  
 `wstool init src`  
-2. 获取源码  
+3. Fetch code  
 `cd src`  
 `git clone https://github.com/wenhust/imlidar_driver.git`  
-3. 编译  
+4. Build and install  
 `catkin_make ..`  
-4. 配置终端环境  
 `echo "source ~/catkin_ws/devel/setup.bash" >> ~/.bashrc`  
 `source ~/.bashrc`  
 
-#### 首次使用
-1. 启动ROS  
+### Run imlidar_driver
+1. Qiuck start  
 `roscore`  
-2. 启动imlidar  
 `rosrun imlidar_driver imlidar_node`  
-或者，如需配置参数则使用：  
+Otherwise，if require to configure parameters：  
 `roslaunch imlidar_driver imlidar.launch`  
-如果提示打开端口失败，则可能是端口操作权限不够。  
+**ATTENTION**  
+If prompted to open the serial port fails, the serial port permission may be not enough.Check the permission of serial port:(such as /dev/ttyUSB0)  
 `ls -l /dev/ttyUSB0`  
-若显示为crw-rw----，则为其加权限使其显示为crw-rw-rw-  
+If show "crw-rw----"，to add permission make it appear as "crw-rw-rw-"(such as /dev/ttyUSB0)  
 `sudo chmod a+rw /dev/ttyUSB0`  
-使用 ls /dev 命令可以查看端口号，此处示例端口号为ttyUSB0
-3. 启动view_imlidar.launch  
+Use the `ls /dev` command can view port, the sample serial port is `ttyUSB0`
+3. View and test  
 `roslaunch imlidar_driver view_imlidar.launch`  
-接着便可以在rviz中观察数据是否正确
+This starts RViz (http://wiki.ros.org/rviz) and you should see the measuring output of the scanner.
 
-#### 参数设置  
-使用gedit打开imlidar.launch，里面可以更改各类参数  
-port:设备端口号，默认值“/dev/ttyUSB0”
-baud_rate:串口波特率，默认值“115200”，请勿随意调整波特率
-frame_id:lidar数据所相对的坐标系名称，默认值“imlidar”
-rps:旋转频率，默认值为7Hz，最高可以调整为10Hz
-data_sequence_direction:雷达角度增量方向，默认值是“cw”，即为顺时针，此时角度增量为负。可以修改为逆时针“ccw”，角度增量为正。这个值的修改可能会导致ROS中定位算法得到的Lidar朝向和实际方向相反，可以通过倒置安装Lidar来解决反向问题。|
+### Parameters  
+If necessary, parameters in the file launch/imlidar.launch can be changed.  
+* `port` (string, default: /dev/ttyUSB0)  
+The device path  
+* `baud_rate` (int, default: 115200)  
+The baud rate to receive lidar data. Should not be changed from 115200 unless the lidar's baud rate is changed (by a firmware upgrade, for example).  
+* `frame_id` (string, default: imlidar)  
+The lidar data frame. This frame should be at the optical center of the lidar, with the x-axis along the zero degree ray, and increse along with data_sequence_direction.  
+* `rps` (int, default: 8)  
+The scan frequency (revolutions per second) in Hz in the range [0;10]  
+* `data_sequence_direction` (string, default: cw)  
+Lidar data sequence increment direction.This direction would be changed according to the actual position that lidar is placed.
+
+### Published Topics
+* scan (sensor_msgs/LaserScan)  
+Scan data from the laser. Under normal conditions, contains 360 pings at 1 degree increments.
