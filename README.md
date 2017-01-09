@@ -31,12 +31,12 @@ Email: support.robot@imscv.com
 1. Qiuck start  
 `roscore`  
 `rosrun imlidar_driver imlidar_node`  
-Otherwise£¬if require to configure parameters£º  
+Otherwise, if require to configure parameters:  
 `roslaunch imlidar_driver imlidar.launch`  
 **ATTENTION**  
 If prompted to open the serial port fails, the serial port permission may be not enough.Check the permission of serial port:(such as /dev/ttyUSB0)  
 `ls -l /dev/ttyUSB0`  
-If show "crw-rw----"£¬to add permission make it appear as "crw-rw-rw-"(such as /dev/ttyUSB0)  
+If show "crw-rw----", to add permission make it appear as "crw-rw-rw-"(such as /dev/ttyUSB0)  
 `sudo chmod a+rw /dev/ttyUSB0`  
 Use the `ls /dev` command can view port, the sample serial port is `ttyUSB0`
 3. View and test  
