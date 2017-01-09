@@ -90,12 +90,12 @@ namespace imlidar_driver {
 	void IMLidar::set_lidar_speed(uint8_t lidar_rps) {
 
 		ResultTypeDef result;
-		memset(ptr_data_to_pack_, 0, sizeof(ptr_data_to_pack_));//clear the buffer
+		memset(ptr_data_to_pack_, 0, sizeof(ptr_data_to_pack_));			//clear the buffer
 		/* Config the lidar rotation speed parameters */
 		((uint16_t*)ptr_data_to_pack_)[0] = lidar_rps * SCAN_RESOLUTION;	//This byte should be the rotation speed of lidar
 		package_out_.DataID = PACK_SET_SPEED;
 		package_out_.DataInBuff = ptr_data_to_pack_;
-		package_out_.DataInLen = 2;								//the length of "SET_SPEED" cmd should be 2
+		package_out_.DataInLen = 2;											//the length of "SET_SPEED" cmd should be 2
 		package_out_.DataOutBuff = ptr_packed_data_to_lidar_;
 
 		result = Package(package_out_);							//pack the data

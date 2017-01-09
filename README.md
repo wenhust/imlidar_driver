@@ -50,9 +50,9 @@ The device path
 * `baud_rate` (int, default: 115200)  
 The baud rate to receive lidar data. Should not be changed from 115200 unless the lidar's baud rate is changed (by a firmware upgrade, for example).  
 * `frame_id` (string, default: imlidar)  
-The lidar data frame. This frame should be at the optical center of the lidar, with the x-axis along the zero degree ray, and increse along with data_sequence_direction.  
+The lidar data frame. This frame should be at the optical center of the lidar, with zero angle being forward along with the x-axis, and angle increse along with data_sequence_direction.(If data_sequence_direction is cw, then the y-axis along the 3*pi/2 degree ray. If data_sequence_direction is ccw, then the y-axis along the pi/2 degree ray.) 
 * `rps` (int, default: 8)  
-The scan frequency (revolutions per second) in Hz in the range [0;10]  
+The scan frequency (revolutions per second) in Hz in the range [0,10].  
 * `data_sequence_direction` (string, default: cw)  
 Lidar data sequence increment direction.This direction would be changed according to the actual position that lidar is placed.
 
