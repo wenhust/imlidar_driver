@@ -89,7 +89,7 @@ namespace imlidar_driver {
 		  * @brief Poll the laser to get a new scan. Blocks until a complete new scan is received or close is called.
 		  * @param scan LaserScan message pointer to fill in with the scan. The caller is responsible for filling in the ROS timestamp and frame_id
 		  */
-		bool poll(sensor_msgs::LaserScan::Ptr scan);
+		void poll(sensor_msgs::LaserScan::Ptr scan);
 
 		/**
 		  * @brief Close the driver down and prevent the polling loop from advancing
@@ -105,7 +105,7 @@ namespace imlidar_driver {
 		std::string data_sequence_direction_;	// @brief The angle increment direction between measurements
 		
 		uint8_t *ptr_data_in_buffer_; 			// @brief The pointer that point the whole lidar input data frame
-		uint32_t data_in_buffer_len_cnt;		// @brief The length counter to the pointer *ptr_data_in_buffer_
+		uint32_t data_in_buffer_len_cnt_;		// @brief The length counter to the pointer *ptr_data_in_buffer_
 		PackageDataStruct package_in_;			// @brief The package that received from lidar
 		PackageDataStruct package_out_;			// @brief The package that will be sent to lidar
 		LidarDataStructDef *ptr_lidar_data_;	// @brief The pointer that point the pure lidar data(no headers etc)

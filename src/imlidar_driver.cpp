@@ -52,7 +52,7 @@ namespace imlidar_driver {
 		ptr_data_to_pack_ = new uint8_t[20];
 		package_out_.DataOutLen = new uint32_t;
 		package_in_.DataOutLen = new uint32_t;
-		data_in_buffer_len_cnt = 0;
+		data_in_buffer_len_cnt_ = 0;
 
 		memset(ptr_data_in_buffer_, 0, sizeof(ptr_data_in_buffer_));
 		memset(ptr_packed_data_to_lidar_, 0, sizeof(ptr_packed_data_to_lidar_));
@@ -82,7 +82,7 @@ namespace imlidar_driver {
 			return;
 		}
 
-		/* we need to delay for a while after config start */
+		/* We need to delay for a while after config start */
 		usleep(1000 * 100);
 		set_lidar_speed(lidar_rps_);
 	}
@@ -92,7 +92,7 @@ namespace imlidar_driver {
 		ResultTypeDef result;
 		memset(ptr_data_to_pack_, 0, sizeof(ptr_data_to_pack_));			//clear the buffer
 		/* Config the lidar rotation speed parameters */
-		((uint16_t*)ptr_data_to_pack_)[0] = lidar_rps * SCAN_RESOLUTION;	//This byte should be the rotation speed of lidar
+		((uint16_t*)ptr_data_to_pack_)[0] = lidar_rps * SCAN_RESOLUTION;	//this byte should be the rotation speed of lidar
 		package_out_.DataID = PACK_SET_SPEED;
 		package_out_.DataInBuff = ptr_data_to_pack_;
 		package_out_.DataInLen = 2;											//the length of "SET_SPEED" cmd should be 2
@@ -111,7 +111,7 @@ namespace imlidar_driver {
 	void IMLidar::send_lidar_cmd(const PackageDataStruct &package_out) {
 		boost::system::error_code ec;
 		try {
-			/* send data through serial port */
+			/* Send data through serial port */
 			boost::asio::write(serial_, boost::asio::buffer(package_out.DataOutBuff, *package_out.DataOutLen), ec);
 		}
 		catch (boost::system::error_code ec) {
@@ -120,73 +120,62 @@ namespace imlidar_driver {
 		}
 	}
 
-	bool IMLidar::poll(sensor_msgs::LaserScan::Ptr scan) {
-		bool result = false;
+	void IMLidar::poll(sensor_msgs::LaserScan::Ptr scan) {
 		bool got_scan = false;
 		uint8_t temp_data;
 		while (!shutting_down_ && !got_scan)
 		{
 			boost::asio::read(serial_, boost::asio::buffer(&temp_data, 1));
-			ptr_data_in_buffer_[data_in_buffer_len_cnt++] = temp_data;
-			package_in_.DataInBuff = ptr_data_in_buffer_;
-			package_in_.DataInLen = data_in_buffer_len_cnt;
-
-			if (result == false)
+			ptr_data_in_buffer_[data_in_buffer_len_cnt_++] = temp_data;
+			/* If the buffer is full, shows the device communication failure */
+			if (data_in_buffer_len_cnt_ >= PARSE_LEN)
 			{
-				if (Unpacking(&package_in_) == PACK_OK and package_in_.DataID == PACK_LIDAR_DATA)
-				{
-					ptr_lidar_data_ = (LidarDataStructDef *)package_in_.DataOutBuff;
-
-					/* prepare the scan to publish */
-					scan->angle_min = ANGLE_MIN;
-					scan->angle_max = ANGLE_MAX;
-					scan->angle_increment = ANGLE_INCREMENT;
-					scan->time_increment = 1.f / ptr_lidar_data_->CurrSpeed / SCAN_RESOLUTION;
-					scan->scan_time = 1.f / ptr_lidar_data_->CurrSpeed;
-					scan->range_min = RANGE_MIN;
-					scan->range_max = RANGE_MAX;
-					scan->ranges.clear();
-					scan->intensities.clear();
-
-					/* check data_sequence_direction for data sequence */
-					if (data_sequence_direction_ == "ccw")
-					{
-						for (uint16_t i = 0; i < SCAN_RESOLUTION; i++)
-						{
-							scan->ranges.push_back((ptr_lidar_data_->Data)[i].Distance / 1000.f);
-							scan->intensities.push_back((ptr_lidar_data_->Data)[i].Confidence);
-						}
-							
-					}
-					else if (data_sequence_direction_ == "cw")
-					{
-						for (uint16_t i = 0; i < SCAN_RESOLUTION; i++)
-						{
-							scan->ranges.push_back((ptr_lidar_data_->Data)[SCAN_RESOLUTION - i].Distance / 1000.f);
-							scan->intensities.push_back((ptr_lidar_data_->Data)[SCAN_RESOLUTION - i].Confidence);
-						}
-					}
-					else
-					{
-						ROS_ERROR("Please check the data_sequence_direction value, is cw or ccw?");
-						result = false;
-						return result;
-					}
-
-					data_in_buffer_len_cnt = 0;
-					package_in_.DataID = PACK_NULL;
-					got_scan = true;
-					result = true;
-				}
-			}
-			/* If the buffer full and unpackage failed, drop it and restart */
-			if (data_in_buffer_len_cnt >= PARSE_LEN)
-			{
+				ROS_ERROR("Communication failure, please check the device!");
 				data_in_buffer_len_cnt = 0;
-				result = false;
+				continue;
+			}
+			package_in_.DataInBuff = ptr_data_in_buffer_;
+			package_in_.DataInLen = data_in_buffer_len_cnt_;
+
+			if (Unpacking(&package_in_) == PACK_OK and package_in_.DataID == PACK_LIDAR_DATA)
+			{
+				ptr_lidar_data_ = (LidarDataStructDef *)package_in_.DataOutBuff;
+
+				/* Prepare the scan to publish */
+				scan->angle_min = ANGLE_MIN;
+				scan->angle_max = ANGLE_MAX;
+				scan->angle_increment = ANGLE_INCREMENT;
+				scan->time_increment = 1.f / ptr_lidar_data_->CurrSpeed / SCAN_RESOLUTION;
+				scan->scan_time = 1.f / ptr_lidar_data_->CurrSpeed;
+				scan->range_min = RANGE_MIN;
+				scan->range_max = RANGE_MAX;
+				scan->ranges.clear();
+				scan->intensities.clear();
+
+				/* Check data_sequence_direction for data sequence */
+				if (data_sequence_direction_ == "ccw")
+				{
+					for (uint16_t i = 0; i < SCAN_RESOLUTION; i++)
+					{
+						scan->ranges.push_back((ptr_lidar_data_->Data)[i].Distance / 1000.f);
+						scan->intensities.push_back((ptr_lidar_data_->Data)[i].Confidence);
+					}	
+				}
+				else if (data_sequence_direction_ == "cw")
+				{
+					for (uint16_t i = 0; i < SCAN_RESOLUTION; i++)
+					{
+						scan->ranges.push_back((ptr_lidar_data_->Data)[SCAN_RESOLUTION - i].Distance / 1000.f);
+						scan->intensities.push_back((ptr_lidar_data_->Data)[SCAN_RESOLUTION - i].Confidence);
+					}
+				}
+
+				data_in_buffer_len_cnt_ = 0;
+				package_in_.DataID = PACK_NULL;
+				got_scan = true;
 			}
 		}
-		return result;
+		return;
 	}
 
 	void IMLidar::close() {

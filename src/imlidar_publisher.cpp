@@ -72,6 +72,18 @@ int main(int argc, char **argv)
 	priv_nh.param("rps", rps, 8);
 	priv_nh.param("data_sequence_direction", data_sequence_direction, std::string("cw"));
 
+	/* Check parameters */
+	if (rps < 0 || rps > 10)
+	{
+		ROS_ERROR("Please check the rps value in [0,10]?");
+		return -1;
+	}
+	if (data_sequence_direction != "ccw" && data_sequence_direction != "cw")
+	{
+		ROS_ERROR("Please check the data_sequence_direction value, is cw or ccw?");
+		return -1;
+	}
+
 	boost::asio::io_service io;
 	try {
  		imlidar_driver::IMLidar lidar(port, baud_rate, io, rps, data_sequence_direction);
@@ -82,10 +94,8 @@ int main(int argc, char **argv)
 		while (ros::ok()) {
 			scan->header.frame_id = frame_id;
 			scan->header.stamp = ros::Time::now();
-			if (lidar.poll(scan))
-			{
-				lidar_pub.publish(scan);
-			}
+			lidar.poll(scan)
+			lidar_pub.publish(scan);
 		}
 		return 0;
 	}
@@ -93,7 +103,6 @@ int main(int argc, char **argv)
 		ROS_ERROR("Error instantiating laser object. Are you sure you have the correct port and baud rate? Error was %s", ex.what());
 		return -1;
 	}
-	ros::spin();
 }
 
 /************************* END OF FILE *******************************/
