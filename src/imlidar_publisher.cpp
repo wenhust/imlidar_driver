@@ -94,7 +94,7 @@ int main(int argc, char **argv)
 		while (ros::ok()) {
 			scan->header.frame_id = frame_id;
 			scan->header.stamp = ros::Time::now();
-			lidar.poll(scan)
+			lidar.poll(scan);
 			lidar_pub.publish(scan);
 		}
 		return 0;

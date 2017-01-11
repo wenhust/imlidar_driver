@@ -131,7 +131,7 @@ namespace imlidar_driver {
 			if (data_in_buffer_len_cnt_ >= PARSE_LEN)
 			{
 				ROS_ERROR("Communication failure, please check the device!");
-				data_in_buffer_len_cnt = 0;
+				data_in_buffer_len_cnt_ = 0;
 				continue;
 			}
 			package_in_.DataInBuff = ptr_data_in_buffer_;
