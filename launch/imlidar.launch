@@ -7,5 +7,6 @@
     <param name="angle_min" value="6.2831853071796" />
     <param name="angle_max" value="0.0" />
     <param name="angle_increment_direction" value="cw" />
+    <param name="mount_angle_ccw_postive_" value="0" />
   </node>
 </launch>
