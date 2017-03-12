@@ -1,0 +1,3 @@
+<launch>
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find imlidar_driver)/rviz/view_imlidar.rviz" />
+</launch>
