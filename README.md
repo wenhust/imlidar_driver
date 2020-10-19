@@ -1,10 +1,9 @@
 # Imlidar Driver for ROS
 ## Overview
-IMLIDAR is a low cost LIDAR sensor suitable for indoor robotic SLAM application. It provides 360 degree scan field and supports 3600 samples per second, 0~10hz rotating frequency with guaranteed 0.15~10 meter ranger distance.  
+IMLIDAR is a low cost LIDAR sensor suitable for indoor robotic SLAM application. It provides 360 degree scan field and supports 3600 samples per second, 0-10hz rotating frequency with guaranteed 0.15-10 meter ranger distance.  
 This is the documentation of a driver for the IMLIDAR ILD26TRI laser range finder.  
 The driver is based upon the widespread boost asio library (<http://www.boost.org>) and publishes device-dependent sensor_msgs/LaserScan data.  
-Website: https://robot.imscv.com  
-Email: support.robot@imscv.com
+Website: https://robot.imscv.com or https://www.ldrobot.com  
 
 ## Version
 0.2.0  
